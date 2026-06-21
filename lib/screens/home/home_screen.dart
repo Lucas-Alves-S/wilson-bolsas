@@ -22,29 +22,39 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   List<PurseModelWithBom> _boms = [];
   bool _loading = true;
+  String? _error;
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _load();
+  void initState() {
+    super.initState();
+    // Load after the first frame so the provider's notifyListeners() during
+    // loadAll() doesn't call setState()/markNeedsBuild() while this widget
+    // (which watches the provider) is still building.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _load();
+    });
   }
 
   Future<void> _load() async {
-    setState(() => _loading = true);
-    final provider = context.read<PurseModelProvider>();
-    await provider.loadAll();
-    final repo = PurseModelRepository(DatabaseHelper.instance);
-    final loaded = <PurseModelWithBom>[];
-    for (final model in provider.models) {
-      if (model.id != null) {
-        loaded.add(await repo.getWithBom(model.id!));
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final provider = context.read<PurseModelProvider>();
+      await provider.loadAll();
+      final repo = PurseModelRepository(DatabaseHelper.instance);
+      final loaded = <PurseModelWithBom>[];
+      for (final model in provider.models) {
+        if (model.id != null) {
+          loaded.add(await repo.getWithBom(model.id!));
+        }
       }
-    }
-    if (mounted) {
-      setState(() {
-        _boms = loaded;
-        _loading = false;
-      });
+      if (mounted) setState(() => _boms = loaded);
+    } catch (e) {
+      if (mounted) setState(() => _error = e.toString());
+    } finally {
+      if (mounted) setState(() => _loading = false);
     }
   }
 
@@ -69,7 +79,9 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
-          : RefreshIndicator(
+          : _error != null
+              ? _ErrorState(message: _error!, onRetry: _load)
+              : RefreshIndicator(
               onRefresh: _load,
               child: ListView(
                 padding: const EdgeInsets.all(16),
@@ -258,6 +270,48 @@ class _LowStockTile extends StatelessWidget {
         title: Text(model.name),
         trailing: StockBadge(stock: model.currentStock),
         onTap: () => context.go('/models/${model.id}'),
+      ),
+    );
+  }
+}
+
+class _ErrorState extends StatelessWidget {
+  final String message;
+  final VoidCallback onRetry;
+  const _ErrorState({required this.message, required this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.error_outline, color: Colors.red, size: 48),
+            const SizedBox(height: 12),
+            Text(
+              'Não foi possível carregar os dados.',
+              style: Theme.of(context).textTheme.titleMedium,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              message,
+              style: Theme.of(context)
+                  .textTheme
+                  .bodySmall
+                  ?.copyWith(color: Colors.grey),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            FilledButton.icon(
+              onPressed: onRetry,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Tentar novamente'),
+            ),
+          ],
+        ),
       ),
     );
   }

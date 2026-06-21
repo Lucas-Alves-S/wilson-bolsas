@@ -8,12 +8,13 @@ class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._();
   DatabaseHelper._();
 
-  Database? _db;
+  Future<Database>? _opening;
 
-  Future<Database> get database async {
-    _db ??= await _open();
-    return _db!;
-  }
+  // Memoize the in-flight open Future (not the resolved Database) so that
+  // concurrent first-callers all await a single _open(); otherwise the await
+  // between the null-check and assignment lets two callers open the same file
+  // at once, which deadlocks the sqflite_android backend.
+  Future<Database> get database => _opening ??= _open();
 
   Future<Database> _open() async {
     final dir = await getDatabasesPath();
