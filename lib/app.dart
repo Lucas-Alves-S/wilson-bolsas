@@ -1,0 +1,42 @@
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import 'core/database/database_helper.dart';
+import 'core/router/app_router.dart';
+import 'core/theme/app_theme.dart';
+import 'providers/material_provider.dart';
+import 'providers/purse_model_provider.dart';
+import 'providers/stock_movement_provider.dart';
+import 'repositories/material_repository.dart';
+import 'repositories/purse_model_repository.dart';
+import 'repositories/stock_movement_repository.dart';
+
+class App extends StatelessWidget {
+  const App({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final db = DatabaseHelper.instance;
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(
+          create: (_) => MaterialProvider(MaterialRepository(db))..loadAll(),
+        ),
+        ChangeNotifierProvider(
+          create: (_) =>
+              PurseModelProvider(PurseModelRepository(db))..loadAll(),
+        ),
+        ChangeNotifierProvider(
+          create: (_) =>
+              StockMovementProvider(StockMovementRepository(db)),
+        ),
+      ],
+      child: MaterialApp.router(
+        title: 'Wilson Bolsas',
+        theme: AppTheme.light,
+        routerConfig: appRouter,
+        debugShowCheckedModeBanner: false,
+      ),
+    );
+  }
+}
