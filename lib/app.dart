@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 
@@ -37,6 +38,16 @@ class App extends StatelessWidget {
         theme: AppTheme.light,
         routerConfig: appRouter,
         debugShowCheckedModeBanner: false,
+        // Android 13+ predictive back decides at gesture-start whether to hand
+        // the gesture to the app, based on SystemNavigator.setFrameworkHandlesBack.
+        // With go_router's bottom-nav shell, the inner navigator reports
+        // canHandlePop:false at a tab root, so the OS would exit before our
+        // shell PopScope runs. Force the framework to always own back; the shell
+        // PopScope in app_router.dart then decides whether to navigate or exit.
+        onNavigationNotification: (_) {
+          SystemNavigator.setFrameworkHandlesBack(true);
+          return true;
+        },
         locale: const Locale('pt', 'BR'),
         supportedLocales: const [Locale('pt', 'BR')],
         localizationsDelegates: const [
