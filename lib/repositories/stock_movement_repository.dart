@@ -18,6 +18,16 @@ class StockMovementRepository {
     return rows.map(StockMovement.fromMap).toList();
   }
 
+  Future<List<StockMovement>> getAllRecent({int limit = 500}) async {
+    final db = await _helper.database;
+    final rows = await db.query(
+      'stock_movements',
+      orderBy: 'moved_at DESC',
+      limit: limit,
+    );
+    return rows.map(StockMovement.fromMap).toList();
+  }
+
   Future<void> addMovement(StockMovement movement) async {
     final db = await _helper.database;
     final now = DateTime.now().toIso8601String();

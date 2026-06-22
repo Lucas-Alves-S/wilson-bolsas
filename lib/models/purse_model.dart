@@ -3,6 +3,8 @@ class PurseModel {
   final String name;
   final double sellingPrice;
   final int currentStock;
+  final String? color;
+  final String? imagePath;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -11,6 +13,8 @@ class PurseModel {
     required this.name,
     required this.sellingPrice,
     this.currentStock = 0,
+    this.color,
+    this.imagePath,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -20,6 +24,8 @@ class PurseModel {
     String? name,
     double? sellingPrice,
     int? currentStock,
+    String? color,
+    String? imagePath,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -28,6 +34,8 @@ class PurseModel {
       name: name ?? this.name,
       sellingPrice: sellingPrice ?? this.sellingPrice,
       currentStock: currentStock ?? this.currentStock,
+      color: color ?? this.color,
+      imagePath: imagePath ?? this.imagePath,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -38,6 +46,8 @@ class PurseModel {
         'name': name,
         'selling_price': sellingPrice,
         'current_stock': currentStock,
+        'color': color,
+        'image_path': imagePath,
         'created_at': createdAt.toIso8601String(),
         'updated_at': updatedAt.toIso8601String(),
       };
@@ -47,6 +57,8 @@ class PurseModel {
         name: map['name'] as String,
         sellingPrice: (map['selling_price'] as num).toDouble(),
         currentStock: map['current_stock'] as int,
+        color: map['color'] as String?,
+        imagePath: map['image_path'] as String?,
         createdAt: DateTime.parse(map['created_at'] as String),
         updatedAt: DateTime.parse(map['updated_at'] as String),
       );

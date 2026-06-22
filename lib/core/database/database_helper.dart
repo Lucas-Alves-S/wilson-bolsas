@@ -2,7 +2,7 @@ import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 
 const int kLowStockThreshold = 3;
-const int _dbVersion = 1;
+const int _dbVersion = 2;
 
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._();
@@ -25,6 +25,13 @@ class DatabaseHelper {
       onConfigure: (db) async {
         await db.execute('PRAGMA foreign_keys = ON');
       },
+      onUpgrade: (db, oldVersion, newVersion) async {
+        if (oldVersion < 2) {
+          await db.execute('ALTER TABLE purse_models ADD COLUMN color TEXT');
+          await db
+              .execute('ALTER TABLE purse_models ADD COLUMN image_path TEXT');
+        }
+      },
       onCreate: (db, _) async {
         await db.execute('''
           CREATE TABLE purse_models (
@@ -32,6 +39,8 @@ class DatabaseHelper {
             name          TEXT    NOT NULL,
             selling_price REAL    NOT NULL DEFAULT 0,
             current_stock INTEGER NOT NULL DEFAULT 0,
+            color         TEXT,
+            image_path    TEXT,
             created_at    TEXT    NOT NULL,
             updated_at    TEXT    NOT NULL
           )
