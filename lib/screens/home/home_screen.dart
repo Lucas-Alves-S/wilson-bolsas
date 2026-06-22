@@ -4,11 +4,12 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/database/database_helper.dart';
-import '../../models/purse_model.dart';
+import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_dimens.dart';
+import '../../core/theme/app_text.dart';
 import '../../models/purse_model_with_bom.dart';
 import '../../providers/purse_model_provider.dart';
 import '../../repositories/purse_model_repository.dart';
-import '../../widgets/stock_badge.dart';
 
 final _currency = NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$');
 
@@ -63,163 +64,61 @@ class _HomeScreenState extends State<HomeScreen> {
     final models = context.watch<PurseModelProvider>().models;
     final totalUnits = models.fold<int>(0, (s, m) => s + m.currentStock);
     final totalValue = _boms.fold<double>(
-        0, (s, b) => s + b.model.sellingPrice * b.model.currentStock);
+        0, (s, b) => s + b.cost * b.model.currentStock);
     final totalProfit = _boms.fold<double>(
         0, (s, b) => s + b.profit * b.model.currentStock);
-    final lowStock =
-        models.where((m) => m.currentStock < kLowStockThreshold).toList();
-    final mostProfitable = _boms.isNotEmpty
-        ? (_boms.reduce((a, b) => a.profit > b.profit ? a : b))
-        : null;
+    final lowStockCount =
+        models.where((m) => m.currentStock < kLowStockThreshold).length;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Wilson Bolsas'),
-        centerTitle: true,
-      ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : _error != null
-              ? _ErrorState(message: _error!, onRetry: _load)
-              : RefreshIndicator(
-              onRefresh: _load,
-              child: ListView(
-                padding: const EdgeInsets.all(16),
+    if (_loading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_error != null) {
+      return _ErrorState(message: _error!, onRetry: _load);
+    }
+
+    return SafeArea(
+      bottom: false,
+      child: RefreshIndicator(
+        onRefresh: _load,
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(
+              AppDimens.screenPadH, 24, AppDimens.screenPadH, 120),
+          children: [
+            _Header(),
+            const SizedBox(height: 18),
+            _HeroProfitCard(profit: totalProfit),
+            const SizedBox(height: 14),
+            IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  _SummaryRow(
-                    totalModels: models.length,
-                    totalUnits: totalUnits,
-                    totalValue: totalValue,
-                    totalProfit: totalProfit,
+                  Expanded(
+                    child: _MetricCard(
+                      label: 'Bolsas',
+                      value: '$totalUnits',
+                      caption: 'unidades em estoque',
+                    ),
                   ),
-                  const SizedBox(height: 20),
-                  if (mostProfitable != null) ...[
-                    _SectionTitle('Modelo mais lucrativo'),
-                    const SizedBox(height: 8),
-                    _MostProfitableCard(bom: mostProfitable),
-                    const SizedBox(height: 20),
-                  ],
-                  if (lowStock.isNotEmpty) ...[
-                    _SectionTitle('Estoque baixo'),
-                    const SizedBox(height: 8),
-                    ...lowStock.map((m) => _LowStockTile(model: m)),
-                    const SizedBox(height: 20),
-                  ],
-                  const SizedBox(height: 8),
-                  _SectionTitle('Acesso rápido'),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _QuickAction(
-                          icon: Icons.shopping_bag_outlined,
-                          label: 'Modelos',
-                          onTap: () => context.go('/models'),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _QuickAction(
-                          icon: Icons.inventory_2_outlined,
-                          label: 'Materiais',
-                          onTap: () => context.go('/materials'),
-                        ),
-                      ),
-                    ],
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: _MetricCard(
+                      label: 'Valor',
+                      value: _currency.format(totalValue),
+                      caption: 'custo investido',
+                      valueSize: 27,
+                    ),
                   ),
                 ],
               ),
             ),
-    );
-  }
-}
-
-class _SummaryRow extends StatelessWidget {
-  final int totalModels;
-  final int totalUnits;
-  final double totalValue;
-  final double totalProfit;
-
-  const _SummaryRow({
-    required this.totalModels,
-    required this.totalUnits,
-    required this.totalValue,
-    required this.totalProfit,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GridView.count(
-      crossAxisCount: 2,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      crossAxisSpacing: 12,
-      mainAxisSpacing: 12,
-      childAspectRatio: 1.6,
-      children: [
-        _StatCard(
-            label: 'Modelos', value: '$totalModels', icon: Icons.shopping_bag),
-        _StatCard(
-            label: 'Unidades em estoque',
-            value: '$totalUnits',
-            icon: Icons.warehouse_outlined),
-        _StatCard(
-            label: 'Valor em estoque',
-            value: _currency.format(totalValue),
-            icon: Icons.attach_money),
-        _StatCard(
-            label: 'Lucro potencial',
-            value: _currency.format(totalProfit),
-            icon: Icons.trending_up,
-            valueColor: totalProfit >= 0
-                ? Colors.green.shade700
-                : Colors.red.shade700),
-      ],
-    );
-  }
-}
-
-class _StatCard extends StatelessWidget {
-  final String label;
-  final String value;
-  final IconData icon;
-  final Color? valueColor;
-
-  const _StatCard({
-    required this.label,
-    required this.value,
-    required this.icon,
-    this.valueColor,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(icon,
-                size: 20, color: Theme.of(context).colorScheme.primary),
-            const Spacer(),
-            Text(
-              value,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: valueColor,
-                  ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            Text(
-              label,
-              style: Theme.of(context)
-                  .textTheme
-                  .bodySmall
-                  ?.copyWith(color: Colors.grey),
-            ),
+            if (lowStockCount > 0) ...[
+              const SizedBox(height: 14),
+              _LowStockBanner(
+                count: lowStockCount,
+                onTap: () => context.go('/models'),
+              ),
+            ],
           ],
         ),
       ),
@@ -227,49 +126,191 @@ class _StatCard extends StatelessWidget {
   }
 }
 
-class _SectionTitle extends StatelessWidget {
-  final String text;
-  const _SectionTitle(this.text);
-
+class _Header extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return Text(text, style: Theme.of(context).textTheme.titleSmall);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('RESUMO DE HOJE', style: AppText.eyebrow()),
+        const SizedBox(height: 4),
+        Text('Estoque', style: AppText.display(size: 26)),
+      ],
+    );
   }
 }
 
-class _MostProfitableCard extends StatelessWidget {
-  final PurseModelWithBom bom;
-  const _MostProfitableCard({required this.bom});
+class _HeroProfitCard extends StatelessWidget {
+  final double profit;
+  const _HeroProfitCard({required this.profit});
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: EdgeInsets.zero,
-      child: ListTile(
-        leading: const Icon(Icons.emoji_events_outlined, color: Colors.amber),
-        title: Text(bom.model.name),
-        subtitle: Text('Lucro: ${_currency.format(bom.profit)} · '
-            'Margem: ${bom.marginPercent.toStringAsFixed(1)}%'),
-        trailing: const Icon(Icons.chevron_right),
-        onTap: () => context.go('/models/${bom.model.id}'),
+    return Container(
+      width: double.infinity,
+      clipBehavior: Clip.antiAlias,
+      padding: const EdgeInsets.fromLTRB(24, 26, 24, 26),
+      decoration: BoxDecoration(
+        color: AppColors.ink,
+        borderRadius: BorderRadius.circular(AppDimens.radiusHero),
+      ),
+      child: Stack(
+        children: [
+          Positioned(
+            right: -40,
+            bottom: -50,
+            child: Container(
+              width: 170,
+              height: 170,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppColors.mint.withAlpha(26),
+              ),
+            ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Lucro potencial',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.mint,
+                ),
+              ),
+              const SizedBox(height: 14),
+              Text(
+                _currency.format(profit),
+                style: AppText.money(
+                  size: 54,
+                  color: Colors.white,
+                  weight: FontWeight.w700,
+                  letterSpacing: -2.4,
+                ),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withAlpha(26),
+                      borderRadius: BorderRadius.circular(AppDimens.pill),
+                    ),
+                    child: Text(
+                      '--%',
+                      style: AppText.money(
+                        size: 12,
+                        color: Colors.white,
+                        weight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Flexible(
+                    child: Text(
+                      'vs. mês passado',
+                      style: TextStyle(
+                          fontSize: 12.5, color: Colors.white.withAlpha(168)),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
 }
 
-class _LowStockTile extends StatelessWidget {
-  final PurseModel model;
-  const _LowStockTile({required this.model});
+class _MetricCard extends StatelessWidget {
+  final String label;
+  final String value;
+  final String caption;
+  final double valueSize;
+
+  const _MetricCard({
+    required this.label,
+    required this.value,
+    required this.caption,
+    this.valueSize = 38,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 6),
-      child: ListTile(
-        leading: const Icon(Icons.warning_amber_rounded, color: Colors.orange),
-        title: Text(model.name),
-        trailing: StockBadge(stock: model.currentStock),
-        onTap: () => context.go('/models/${model.id}'),
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: softCard(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label.toUpperCase(), style: AppText.eyebrow(size: 11)),
+          const SizedBox(height: 10),
+          Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: AppText.money(
+              size: valueSize,
+              weight: FontWeight.w700,
+              letterSpacing: -1.2,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(caption,
+              style:
+                  const TextStyle(fontSize: 11.5, color: AppColors.textMuted)),
+        ],
+      ),
+    );
+  }
+}
+
+class _LowStockBanner extends StatelessWidget {
+  final int count;
+  final VoidCallback onTap;
+  const _LowStockBanner({required this.count, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: AppColors.peachBg,
+          borderRadius: BorderRadius.circular(18),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 9,
+              height: 9,
+              decoration: const BoxDecoration(
+                color: AppColors.peachDot,
+                shape: BoxShape.circle,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                count == 1
+                    ? '1 modelo com estoque baixo'
+                    : '$count modelos com estoque baixo',
+                style: const TextStyle(
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.peachText,
+                ),
+              ),
+            ),
+            const Icon(Icons.chevron_right,
+                size: 18, color: AppColors.peachChevron),
+          ],
+        ),
       ),
     );
   }
@@ -301,7 +342,7 @@ class _ErrorState extends StatelessWidget {
               style: Theme.of(context)
                   .textTheme
                   .bodySmall
-                  ?.copyWith(color: Colors.grey),
+                  ?.copyWith(color: AppColors.textMuted),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 16),
@@ -311,41 +352,6 @@ class _ErrorState extends StatelessWidget {
               label: const Text('Tentar novamente'),
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _QuickAction extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-
-  const _QuickAction({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      margin: EdgeInsets.zero,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 20),
-          child: Column(
-            children: [
-              Icon(icon,
-                  size: 32, color: Theme.of(context).colorScheme.primary),
-              const SizedBox(height: 8),
-              Text(label,
-                  style: Theme.of(context).textTheme.labelLarge),
-            ],
-          ),
         ),
       ),
     );
