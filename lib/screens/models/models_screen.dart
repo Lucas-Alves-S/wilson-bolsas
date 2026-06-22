@@ -75,6 +75,13 @@ class _ModelsScreenState extends State<ModelsScreen> {
     _loadDetails();
   }
 
+  Future<void> _openPlan() async {
+    final provider = context.read<PurseModelProvider>();
+    await context.push('/models/plan');
+    await provider.loadAll();
+    _loadDetails();
+  }
+
   Future<void> _openDetail(int id) async {
     final provider = context.read<PurseModelProvider>();
     await context.push('/models/$id');
@@ -207,6 +214,7 @@ class _ModelsScreenState extends State<ModelsScreen> {
                       AppDimens.screenPadH, 16, AppDimens.screenPadH, 12),
                   child: _Header(
                     onAdd: _openNew,
+                    onPlan: _openPlan,
                     colorFilter: _colorFilter,
                     onColorTap:
                         colors.isEmpty ? null : () => _openColorFilter(colors),
@@ -263,6 +271,7 @@ class _ModelsScreenState extends State<ModelsScreen> {
 
 class _Header extends StatelessWidget {
   final VoidCallback onAdd;
+  final VoidCallback onPlan;
   final String? colorFilter;
   final VoidCallback? onColorTap;
   final VoidCallback onColorClear;
@@ -272,6 +281,7 @@ class _Header extends StatelessWidget {
 
   const _Header({
     required this.onAdd,
+    required this.onPlan,
     required this.colorFilter,
     required this.onColorTap,
     required this.onColorClear,
@@ -299,6 +309,8 @@ class _Header extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 10),
+            _PlanButton(onTap: onPlan),
+            const SizedBox(width: 9),
             _AddButton(onTap: onAdd),
           ],
         ),
@@ -468,6 +480,31 @@ class _NoMatchState extends StatelessWidget {
           Text('Nenhum modelo com esses filtros',
               style: TextStyle(color: AppColors.textMuted)),
         ],
+      ),
+    );
+  }
+}
+
+/// Light icon button (soft card) that opens the weekly production-planning
+/// screen, sat next to the dark "add model" button.
+class _PlanButton extends StatelessWidget {
+  final VoidCallback onTap;
+  const _PlanButton({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 42,
+        height: 42,
+        decoration: BoxDecoration(
+          color: AppColors.card,
+          borderRadius: BorderRadius.circular(AppDimens.radiusIcon),
+          border: Border.all(color: AppColors.fieldBorder),
+          boxShadow: kCardShadow,
+        ),
+        child: const Icon(Icons.event_note, color: AppColors.ink, size: 21),
       ),
     );
   }

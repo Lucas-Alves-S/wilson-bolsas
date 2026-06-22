@@ -37,6 +37,27 @@ class StockMovementRepository {
         'UPDATE purse_models SET current_stock = current_stock + ?, updated_at = ? WHERE id = ?',
         [movement.delta, now, movement.modelId],
       );
+      // A positive delta is an Entrada — treated as production, so consume the
+      // model's Ficha técnica (BOM) from material stock. (All Entradas are
+      // assumed to be production; a rare Devolução can be corrected via the
+      // material's manual stock edit. Material stock may go negative, which
+      // simply reads as "low".)
+      if (movement.delta > 0) {
+        final bom = await txn.query(
+          'model_materials',
+          columns: ['material_id', 'quantity_per_unit'],
+          where: 'model_id = ?',
+          whereArgs: [movement.modelId],
+        );
+        for (final row in bom) {
+          final consumed =
+              movement.delta * (row['quantity_per_unit'] as num).toDouble();
+          await txn.rawUpdate(
+            'UPDATE materials SET current_stock = current_stock - ?, updated_at = ? WHERE id = ?',
+            [consumed, now, row['material_id']],
+          );
+        }
+      }
     });
   }
 }

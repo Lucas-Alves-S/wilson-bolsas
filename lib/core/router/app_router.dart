@@ -4,10 +4,14 @@ import 'package:go_router/go_router.dart';
 
 import '../../screens/home/home_screen.dart';
 import '../../screens/materials/material_form_screen.dart';
+import '../../screens/materials/material_purchase_form_screen.dart';
+import '../../screens/materials/material_purchases_screen.dart';
 import '../../screens/materials/materials_screen.dart';
+import '../../screens/materials/shopping_list_screen.dart';
 import '../../screens/models/model_detail_screen.dart';
 import '../../screens/models/model_form_screen.dart';
 import '../../screens/models/models_screen.dart';
+import '../../screens/models/production_plan_screen.dart';
 import '../../screens/movements/movements_screen.dart';
 import '../../screens/movements/stock_movement_form_screen.dart';
 import '../../widgets/app_bottom_nav.dart';
@@ -70,6 +74,10 @@ final appRouter = GoRouter(
               builder: (context, state) => const ModelFormScreen(),
             ),
             GoRoute(
+              path: 'plan',
+              builder: (context, state) => const ProductionPlanScreen(),
+            ),
+            GoRoute(
               path: ':id',
               builder: (context, state) =>
                   ModelDetailScreen(id: int.parse(state.pathParameters['id']!)),
@@ -99,8 +107,26 @@ final appRouter = GoRouter(
               builder: (context, state) => const MaterialFormScreen(),
             ),
             GoRoute(
+              path: 'purchases',
+              builder: (context, state) => const MaterialPurchasesScreen(),
+            ),
+            GoRoute(
+              path: 'shopping',
+              builder: (context, state) => const ShoppingListScreen(),
+            ),
+            GoRoute(
+              path: 'purchase',
+              builder: (context, state) => const MaterialPurchaseFormScreen(),
+            ),
+            GoRoute(
               path: ':id/edit',
               builder: (context, state) => MaterialFormScreen(
+                materialId: int.parse(state.pathParameters['id']!),
+              ),
+            ),
+            GoRoute(
+              path: ':id/purchase',
+              builder: (context, state) => MaterialPurchaseFormScreen(
                 materialId: int.parse(state.pathParameters['id']!),
               ),
             ),

@@ -4,10 +4,12 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/database/database_helper.dart';
+import '../../core/planning/material_needs.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_text.dart';
 import '../../models/purse_model_with_bom.dart';
+import '../../providers/material_provider.dart';
 import '../../providers/purse_model_provider.dart';
 import '../../repositories/purse_model_repository.dart';
 
@@ -44,6 +46,9 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       final provider = context.read<PurseModelProvider>();
       await provider.loadAll();
+      // Materials carry their own stock used by the low-material warning; keep
+      // them fresh on (re)load so pull-to-refresh updates the banner too.
+      if (mounted) await context.read<MaterialProvider>().loadAll();
       final repo = PurseModelRepository(DatabaseHelper.instance);
       final loaded = <PurseModelWithBom>[];
       for (final model in provider.models) {
@@ -69,6 +74,10 @@ class _HomeScreenState extends State<HomeScreen> {
         0, (s, b) => s + b.profit * b.model.currentStock);
     final lowStockCount =
         models.where((m) => m.currentStock < kLowStockThreshold).length;
+    final materials = context.watch<MaterialProvider>().materials;
+    final materialNeed = weeklyMaterialNeed(_boms);
+    final toBuyCount =
+        materials.where((m) => materialToBuy(m, materialNeed) > 0).length;
 
     if (_loading) {
       return const Center(child: CircularProgressIndicator());
@@ -117,6 +126,13 @@ class _HomeScreenState extends State<HomeScreen> {
               _LowStockBanner(
                 count: lowStockCount,
                 onTap: () => context.go('/models'),
+              ),
+            ],
+            if (toBuyCount > 0) ...[
+              const SizedBox(height: 14),
+              _LowMaterialBanner(
+                count: toBuyCount,
+                onTap: () => context.push('/materials/shopping'),
               ),
             ],
           ],
@@ -300,6 +316,53 @@ class _LowStockBanner extends StatelessWidget {
                 count == 1
                     ? '1 modelo com estoque baixo'
                     : '$count modelos com estoque baixo',
+                style: const TextStyle(
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.peachText,
+                ),
+              ),
+            ),
+            const Icon(Icons.chevron_right,
+                size: 18, color: AppColors.peachChevron),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _LowMaterialBanner extends StatelessWidget {
+  final int count;
+  final VoidCallback onTap;
+  const _LowMaterialBanner({required this.count, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: AppColors.peachBg,
+          borderRadius: BorderRadius.circular(18),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 9,
+              height: 9,
+              decoration: const BoxDecoration(
+                color: AppColors.peachDot,
+                shape: BoxShape.circle,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                count == 1
+                    ? '1 material para comprar'
+                    : '$count materiais para comprar',
                 style: const TextStyle(
                   fontSize: 13.5,
                   fontWeight: FontWeight.w500,

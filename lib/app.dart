@@ -7,8 +7,10 @@ import 'core/database/database_helper.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
 import 'providers/material_provider.dart';
+import 'providers/material_purchase_provider.dart';
 import 'providers/purse_model_provider.dart';
 import 'providers/stock_movement_provider.dart';
+import 'repositories/material_purchase_repository.dart';
 import 'repositories/material_repository.dart';
 import 'repositories/purse_model_repository.dart';
 import 'repositories/stock_movement_repository.dart';
@@ -31,6 +33,10 @@ class App extends StatelessWidget {
         ChangeNotifierProvider(
           create: (_) =>
               StockMovementProvider(StockMovementRepository(db)),
+        ),
+        ChangeNotifierProvider(
+          create: (_) =>
+              MaterialPurchaseProvider(MaterialPurchaseRepository(db)),
         ),
       ],
       child: MaterialApp.router(

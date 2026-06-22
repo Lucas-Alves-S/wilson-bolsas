@@ -67,6 +67,21 @@ class PurseModelRepository {
     await db.delete('purse_models', where: 'id = ?', whereArgs: [id]);
   }
 
+  /// Bulk-updates only the weekly production target of many models (used by the
+  /// production-planning screen). Lightweight: touches one column, no BOM rewrite.
+  Future<void> setWeeklyTargets(Map<int, int> targets) async {
+    final db = await _helper.database;
+    final now = DateTime.now().toIso8601String();
+    await db.transaction((txn) async {
+      for (final entry in targets.entries) {
+        await txn.rawUpdate(
+          'UPDATE purse_models SET weekly_target = ?, updated_at = ? WHERE id = ?',
+          [entry.value, now, entry.key],
+        );
+      }
+    });
+  }
+
   Future<void> setBom(int modelId, List<ModelMaterial> entries) async {
     final db = await _helper.database;
     await db.transaction((txn) async {

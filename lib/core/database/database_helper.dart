@@ -2,7 +2,7 @@ import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 
 const int kLowStockThreshold = 3;
-const int _dbVersion = 2;
+const int _dbVersion = 3;
 
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._();
@@ -31,6 +31,22 @@ class DatabaseHelper {
           await db
               .execute('ALTER TABLE purse_models ADD COLUMN image_path TEXT');
         }
+        if (oldVersion < 3) {
+          await db.execute(
+              'ALTER TABLE materials ADD COLUMN current_stock REAL NOT NULL DEFAULT 0');
+          await db.execute(
+              'ALTER TABLE purse_models ADD COLUMN weekly_target INTEGER NOT NULL DEFAULT 0');
+          await db.execute('''
+            CREATE TABLE material_purchases (
+              id           INTEGER PRIMARY KEY AUTOINCREMENT,
+              material_id  INTEGER NOT NULL,
+              quantity     REAL    NOT NULL,
+              unit_price   REAL    NOT NULL,
+              purchased_at TEXT    NOT NULL,
+              FOREIGN KEY (material_id) REFERENCES materials(id) ON DELETE CASCADE
+            )
+          ''');
+        }
       },
       onCreate: (db, _) async {
         await db.execute('''
@@ -39,6 +55,7 @@ class DatabaseHelper {
             name          TEXT    NOT NULL,
             selling_price REAL    NOT NULL DEFAULT 0,
             current_stock INTEGER NOT NULL DEFAULT 0,
+            weekly_target INTEGER NOT NULL DEFAULT 0,
             color         TEXT,
             image_path    TEXT,
             created_at    TEXT    NOT NULL,
@@ -51,6 +68,7 @@ class DatabaseHelper {
             name                TEXT NOT NULL,
             unit                TEXT NOT NULL,
             last_price_per_unit REAL NOT NULL DEFAULT 0,
+            current_stock       REAL NOT NULL DEFAULT 0,
             created_at          TEXT NOT NULL,
             updated_at          TEXT NOT NULL
           )
@@ -74,6 +92,16 @@ class DatabaseHelper {
             reason   TEXT,
             moved_at TEXT NOT NULL,
             FOREIGN KEY (model_id) REFERENCES purse_models(id) ON DELETE CASCADE
+          )
+        ''');
+        await db.execute('''
+          CREATE TABLE material_purchases (
+            id           INTEGER PRIMARY KEY AUTOINCREMENT,
+            material_id  INTEGER NOT NULL,
+            quantity     REAL    NOT NULL,
+            unit_price   REAL    NOT NULL,
+            purchased_at TEXT    NOT NULL,
+            FOREIGN KEY (material_id) REFERENCES materials(id) ON DELETE CASCADE
           )
         ''');
       },

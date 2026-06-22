@@ -23,11 +23,16 @@ class _MaterialFormScreenState extends State<MaterialFormScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameCtrl = TextEditingController();
   final _priceCtrl = TextEditingController();
+  final _stockCtrl = TextEditingController();
   int _unitIndex = 0; // 0 = Unidades, 1 = Metros
   bool _saving = false;
   MaterialItem? _original;
 
   static const _units = ['Unidade', 'Metro'];
+
+  /// Renders stored stock without a trailing ".0" for whole numbers.
+  String _formatStock(double v) =>
+      v == v.roundToDouble() ? v.toStringAsFixed(0) : v.toString();
 
   @override
   void initState() {
@@ -45,6 +50,7 @@ class _MaterialFormScreenState extends State<MaterialFormScreen> {
       _original = mat;
       _nameCtrl.text = mat.name;
       _priceCtrl.text = mat.lastPricePerUnit.toString();
+      _stockCtrl.text = _formatStock(mat.currentStock);
       _unitIndex = mat.unit.toLowerCase().contains('metro') ? 1 : 0;
       setState(() {});
     }
@@ -54,6 +60,7 @@ class _MaterialFormScreenState extends State<MaterialFormScreen> {
   void dispose() {
     _nameCtrl.dispose();
     _priceCtrl.dispose();
+    _stockCtrl.dispose();
     super.dispose();
   }
 
@@ -62,6 +69,9 @@ class _MaterialFormScreenState extends State<MaterialFormScreen> {
     setState(() => _saving = true);
 
     final price = double.parse(_priceCtrl.text.trim().replaceAll(',', '.'));
+    final stock = _stockCtrl.text.trim().isEmpty
+        ? 0.0
+        : double.parse(_stockCtrl.text.trim().replaceAll(',', '.'));
     final unit = _units[_unitIndex];
     final now = DateTime.now();
     final provider = context.read<MaterialProvider>();
@@ -71,6 +81,7 @@ class _MaterialFormScreenState extends State<MaterialFormScreen> {
         name: _nameCtrl.text.trim(),
         unit: unit,
         lastPricePerUnit: price,
+        currentStock: stock,
         updatedAt: now,
       ));
     } else {
@@ -78,6 +89,7 @@ class _MaterialFormScreenState extends State<MaterialFormScreen> {
         name: _nameCtrl.text.trim(),
         unit: unit,
         lastPricePerUnit: price,
+        currentStock: stock,
         createdAt: now,
         updatedAt: now,
       ));
@@ -149,6 +161,35 @@ class _MaterialFormScreenState extends State<MaterialFormScreen> {
                     const SizedBox(height: 8),
                     Text(
                       'Valor pago por $perWord deste material.',
+                      style: const TextStyle(
+                          fontSize: 11.5, color: AppColors.textMuted),
+                    ),
+                    const SizedBox(height: 24),
+                    _Label('Estoque atual'),
+                    const SizedBox(height: 9),
+                    TextFormField(
+                      controller: _stockCtrl,
+                      decoration: InputDecoration(
+                        hintText: '0',
+                        suffixText: _unitIndex == 1 ? 'm' : 'un.',
+                      ),
+                      keyboardType:
+                          const TextInputType.numberWithOptions(decimal: true),
+                      inputFormatters: [
+                        FilteringTextInputFormatter.allow(RegExp(r'[\d,.]')),
+                      ],
+                      validator: (v) {
+                        if (v == null || v.trim().isEmpty) return null;
+                        final parsed =
+                            double.tryParse(v.trim().replaceAll(',', '.'));
+                        if (parsed == null || parsed < 0) return 'Valor inválido';
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Quantidade em estoque. As compras somam aqui '
+                      'automaticamente.',
                       style: const TextStyle(
                           fontSize: 11.5, color: AppColors.textMuted),
                     ),

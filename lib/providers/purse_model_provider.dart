@@ -51,6 +51,11 @@ class PurseModelProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> saveWeeklyTargets(Map<int, int> targets) async {
+    await _repo.setWeeklyTargets(targets);
+    await loadAll();
+  }
+
   Future<void> remove(int id) async {
     await _repo.delete(id);
     _models = _models.where((m) => m.id != id).toList();
