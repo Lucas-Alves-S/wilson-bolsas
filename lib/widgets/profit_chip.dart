@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../core/theme/app_colors.dart';
+import '../core/theme/app_dimens.dart';
+import '../core/theme/app_text.dart';
+
 final _fmt = NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$');
 
+/// Mint/peach currency pill for a model's profit.
 class ProfitChip extends StatelessWidget {
   final double profit;
   const ProfitChip({super.key, required this.profit});
@@ -10,21 +15,17 @@ class ProfitChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final positive = profit >= 0;
-    final color = positive ? Colors.green.shade700 : Colors.red.shade700;
+    final bg = positive ? AppColors.mint.withAlpha(60) : AppColors.peachBg;
+    final fg = positive ? AppColors.profitStrong : AppColors.peachText;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withAlpha(25),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withAlpha(80)),
+        color: bg,
+        borderRadius: BorderRadius.circular(AppDimens.pill),
       ),
       child: Text(
         _fmt.format(profit),
-        style: TextStyle(
-          color: color,
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
-        ),
+        style: AppText.money(size: 12, color: fg, weight: FontWeight.w700),
       ),
     );
   }
